@@ -1,0 +1,2 @@
+# هذا الملف يحافظ على وجود مجلد models في Git
+# ضع هنا ملفات النموذج بعد تدريبها: classifier_v1.pkl, vectorizer_v1.pkl
