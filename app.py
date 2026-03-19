@@ -13,15 +13,15 @@ CORS(app)
 # استخدام DATABASE_URL من البيئة (PostgreSQL) أو SQLite كبديل
 database_url = os.environ.get('DATABASE_URL', '')
 if database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
-
+    database_url = database_url.replace('postgres://', 'postgresql+pg8000://', 1)
+elif database_url.startswith('postgresql://'):
+    database_url = database_url.replace('postgresql://', 'postgresql+pg8000://', 1)
 if database_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
     # استخدام /tmp لضمان الكتابة على Railway
     db_path = '/tmp/subjects.db'
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = os.environ.get('DEBUG', 'False').lower() == 'true'
 
@@ -147,8 +147,6 @@ def get_subject(subject_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     try:
@@ -159,6 +157,30 @@ def get_stats():
             'total_searches': SearchHistory.query.count()
         })
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/import', methods=['POST'])
+def import_data():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        subjects_data = data.get('subjects', [])
+        imported = 0
+        for item in subjects_data:
+            subject = Subject(
+                title_ar=item.get('title_ar', ''),
+                title_en=item.get('title_en', ''),
+                description=item.get('description', ''),
+                category_id=item.get('category_id'),
+                source_id=item.get('source_id')
+            )
+            db.session.add(subject)
+            imported += 1
+        db.session.commit()
+        return jsonify({'message': f'Imported {imported} subjects', 'count': imported})
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 def init_db():
