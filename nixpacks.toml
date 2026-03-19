@@ -1,3 +1,6 @@
+[nix]
+pkgs = ["postgresql"]
+
 [build]
 cmd = "pip install -r requirements-web.txt"
 
