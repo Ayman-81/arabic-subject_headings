@@ -1,6 +1,9 @@
 [nix]
 pkgs = ["postgresql"]
 
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.11"
+
 [build]
 cmd = "pip install -r requirements-web.txt"
 
