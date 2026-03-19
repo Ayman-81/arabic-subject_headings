@@ -154,7 +154,7 @@ def get_stats():
             'total_subjects': Subject.query.count(),
             'total_categories': Category.query.count(),
             'total_sources': Source.query.count(),
-            'total_searches': SearchHistory.query.count()
+            'total_searches': db.session.query(SearchHistory).count()
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
