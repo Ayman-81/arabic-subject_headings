@@ -147,6 +147,8 @@ def get_subject(subject_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     try:
