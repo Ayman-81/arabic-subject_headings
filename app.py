@@ -153,9 +153,121 @@ def import_data():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/seed-subjects', methods=['POST'])
+def seed_subjects():
+    """إضافة عينة شاملة من رؤوس الموضوعات العربية"""
+    try:
+        # حذف الموضوعات الموجودة
+        Subject.query.delete()
+        
+        sources = Source.query.all()
+        categories = Category.query.all()
+        
+        if not sources or not categories:
+            return jsonify({'error': 'المصادر أو التصنيفات غير موجودة'}), 400
+        
+        # قائمة رؤوس الموضوعات الشاملة
+        subjects_data = [
+            # علوم الحاسوب
+            ('الذكاء الاصطناعي', 'Artificial Intelligence', 'تقنية صنع الآلات الذكية'),
+            ('تعلم الآلة', 'Machine Learning', 'تعليم الحواسيب من البيانات'),
+            ('الشبكات العصبية', 'Neural Networks', 'نماذج حاسوبية تحاكي الدماغ'),
+            ('البيانات الضخمة', 'Big Data', 'معالجة مجموعات بيانات ضخمة'),
+            ('علم البيانات', 'Data Science', 'تحليل واستخلاص المعرفة من البيانات'),
+            ('أمن المعلومات', 'Information Security', 'حماية المعلومات والأنظمة'),
+            ('الأمن السيبراني', 'Cybersecurity', 'حماية الأنظمة من الهجمات الرقمية'),
+            ('إنترنت الأشياء', 'Internet of Things', 'شبكة الأجهزة المتصلة'),
+            ('الحوسبة السحابية', 'Cloud Computing', 'خدمات الحوسبة عبر الإنترنت'),
+            ('البرمجة الشيئية', 'Object-Oriented Programming', 'نموذج برمجي يعتمد على الكائنات'),
+            # المكتبات والمعلومات  
+            ('علم المكتبات', 'Library Science', 'علم تنظيم وإدارة المكتبات'),
+            ('الفهرسة', 'Cataloging', 'تنظيم ووصف الموارد المكتبية'),
+            ('التصنيف', 'Classification', 'تصنيف المواد حسب الموضوعات'),
+            ('مارك 21', 'MARC 21', 'معيار الفهرسة المقروءة آلياً'),
+            ('دبلن كور', 'Dublin Core', 'معيار البيانات الوصفية'),
+            ('المكتبات الرقمية', 'Digital Libraries', 'مجموعات رقمية منظمة'),
+            ('المستودعات الرقمية', 'Digital Repositories', 'أنظمة حفظ المحتوى الرقمي'),
+            ('إدارة المعرفة', 'Knowledge Management', 'إدارة وتنظيم المعرفة المؤسسية'),
+            ('الأرشفة الإلكترونية', 'Electronic Archiving', 'حفظ الوثائق إلكترونياً'),
+            ('نظم استرجاع المعلومات', 'Information Retrieval Systems', 'أنظمة البحث والاسترجاع'),
+            # العلوم الطبية
+            ('الطب الباطني', 'Internal Medicine', 'تشخيص وعلاج الأمراض الداخلية'),
+            ('الجراحة', 'Surgery', 'العمليات الجراحية العلاجية'),
+            ('طب الأطفال', 'Pediatrics', 'صحة وأمراض الأطفال'),
+            ('الصحة العامة', 'Public Health', 'علم صحة المجتمعات'),
+            ('علم الأوبئة', 'Epidemiology', 'دراسة انتشار الأمراض'),
+            ('علم الصيدلة', 'Pharmacology', 'علم الأدوية وتأثيراتها'),
+            ('التمريض', 'Nursing', 'الرعاية الصحية التمريضية'),
+            ('الطب النفسي', 'Psychiatry', 'تشخيص وعلاج الأمراض النفسية'),
+            ('علم التشريح', 'Anatomy', 'علم بنية الجسم البشري'),
+            ('علم وظائف الأعضاء', 'Physiology', 'علم وظائف أعضاء الجسم'),
+            # العلوم الإنسانية
+            ('علم الاجتماع', 'Sociology', 'دراسة المجتمعات البشرية'),
+            ('علم النفس', 'Psychology', 'علم العقل والسلوك البشري'),
+            ('الأنثروبولوجيا', 'Anthropology', 'علم الإنسان والثقافات'),
+            ('التاريخ', 'History', 'دراسة الأحداث الماضية'),
+            ('الجغرافيا', 'Geography', 'علم دراسة الأرض'),
+            ('العلوم السياسية', 'Political Science', 'دراسة النظم السياسية'),
+            ('الاقتصاد', 'Economics', 'علم إنتاج وتوزيع الثروة'),
+            ('إدارة الأعمال', 'Business Administration', 'إدارة المنظمات والشركات'),
+            ('القانون', 'Law', 'القواعد والأنظمة القانونية'),
+            ('الفلسفة', 'Philosophy', 'البحث في الوجود والمعرفة'),
+            # اللغة والأدب
+            ('اللغة العربية', 'Arabic Language', 'اللغة العربية وقواعدها'),
+            ('النحو', 'Grammar', 'قواعد اللغة العربية'),
+            ('البلاغة', 'Rhetoric', 'علم البيان والبديع'),
+            ('الأدب العربي', 'Arabic Literature', 'الشعر والنثر العربي'),
+            ('الشعر العربي', 'Arabic Poetry', 'الشعر في الأدب العربي'),
+            ('النقد الأدبي', 'Literary Criticism', 'تحليل ونقد الأعمال الأدبية'),
+            ('اللسانيات', 'Linguistics', 'العلم الذي يدرس اللغة'),
+            ('الترجمة', 'Translation', 'نقل المعنى بين اللغات'),
+            ('اللغة الإنجليزية', 'English Language', 'اللغة الإنجليزية وآدابها'),
+            ('علم المصطلحات', 'Terminology', 'علم المصطلحات العلمية'),
+            # العلوم الطبيعية
+            ('الفيزياء', 'Physics', 'علم المادة والطاقة'),
+            ('الكيمياء', 'Chemistry', 'علم تركيب المادة وخواصها'),
+            ('الأحياء', 'Biology', 'علم الكائنات الحية'),
+            ('الرياضيات', 'Mathematics', 'علم الأعداد والكميات'),
+            ('الجبر', 'Algebra', 'فرع من الرياضيات'),
+            ('الهندسة', 'Geometry', 'دراسة الأشكال الهندسية'),
+            ('الإحصاء', 'Statistics', 'علم جمع وتحليل البيانات'),
+            ('علم الفلك', 'Astronomy', 'علم دراسة الأجرام السماوية'),
+            ('الجيولوجيا', 'Geology', 'علم طبقات الأرض'),
+            ('علم البيئة', 'Ecology', 'علم العلاقات بين الكائنات'),
+        ]
+        
+        added = 0
+        for idx, (title_ar, title_en, desc) in enumerate(subjects_data):
+            # توزيع الموضوعات على التصنيفات بشكل منطقي
+            if idx < 10: cat_id = categories[0].id  # حاسوب
+            elif idx < 20: cat_id = categories[3].id  # مكتبات
+            elif idx < 30: cat_id = categories[1].id  # طب
+            elif idx < 40: cat_id = categories[2].id  # إنسانيات
+            elif idx < 50: cat_id = categories[5].id  # لغة وأدب
+            else: cat_id = categories[4].id  # علوم طبيعية
+            
+            subject = Subject(
+                title_ar=title_ar,
+                title_en=title_en,
+                description=desc,
+                category_id=cat_id,
+                source_id=sources[0].id
+            )
+            db.session.add(subject)
+            added += 1
+        
+        db.session.commit()
+        return jsonify({'message': f'تم إضافة {added} موضوعاً', 'count': added})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 def init_db():
     with app.app_context():
         db.create_all()
+
+        
         if Source.query.count() == 0:
             sources_data = [
                 Source(name_ar='قائمة شعبان خليفة', name_en='Shaaban Khalifa List', description='قائمة رؤوس الموضوعات العربية الكبرى'),
