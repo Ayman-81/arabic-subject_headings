@@ -10,21 +10,19 @@ app = Flask(__name__)
 CORS(app)
 
 # إعدادات قاعدة البيانات
-# استخدام DATABASE_URL من البيئة (PostgreSQL) أو SQLite كبديل
 database_url = os.environ.get('DATABASE_URL', '')
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql+pg8000://', 1)
 elif database_url.startswith('postgresql://'):
     database_url = database_url.replace('postgresql://', 'postgresql+pg8000://', 1)
+
 if database_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
-    # استخدام /tmp لضمان الكتابة على Railway
     db_path = '/tmp/subjects.db'
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['DEBUG'] = os.environ.get('DEBUG', 'False').lower() == 'true'
 
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 class Source(db.Model):
@@ -94,58 +92,34 @@ def search():
                 Subject.description.ilike(f'%{query}%')
             )
         )
-        if source_id:
-            q = q.filter(Subject.source_id == source_id)
-        if category_id:
-            q = q.filter(Subject.category_id == category_id)
+        if source_id: q = q.filter(Subject.source_id == source_id)
+        if category_id: q = q.filter(Subject.category_id == category_id)
         results = q.limit(per_page).offset((page - 1) * per_page).all()
         total = q.count()
-        # حفظ سجل البحث
         try:
             history = SearchHistory(query=query, results_count=len(results))
             db.session.add(history)
             db.session.commit()
-        except Exception:
-            db.session.rollback()
+        except Exception: db.session.rollback()
         return jsonify({
-            'query': query,
-            'results': [s.to_dict() for s in results],
-            'count': len(results),
-            'total': total,
-            'page': page
+            'query': query, 'results': [s.to_dict() for s in results],
+            'count': len(results), 'total': total, 'page': page
         })
-    except Exception as e:
-        return jsonify({'error': str(e), 'results': [], 'count': 0}), 500
+    except Exception as e: return jsonify({'error': str(e), 'results': [], 'count': 0}), 500
 
 @app.route('/api/categories', methods=['GET'])
 def get_categories():
     try:
         categories = Category.query.all()
-        return jsonify({
-            'categories': [c.to_dict() for c in categories],
-            'count': len(categories)
-        })
-    except Exception as e:
-        return jsonify({'error': str(e), 'categories': [], 'count': 0}), 500
+        return jsonify({'categories': [c.to_dict() for c in categories], 'count': len(categories)})
+    except Exception as e: return jsonify({'error': str(e), 'categories': [], 'count': 0}), 500
 
 @app.route('/api/sources', methods=['GET'])
 def get_sources():
     try:
         sources = Source.query.all()
-        return jsonify({
-            'sources': [s.to_dict() for s in sources],
-            'count': len(sources)
-        })
-    except Exception as e:
-        return jsonify({'error': str(e), 'sources': [], 'count': 0}), 500
-
-@app.route('/api/subjects/<int:subject_id>', methods=['GET'])
-def get_subject(subject_id):
-    try:
-        subject = Subject.query.get_or_404(subject_id)
-        return jsonify(subject.to_dict())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'sources': [s.to_dict() for s in sources], 'count': len(sources)})
+    except Exception as e: return jsonify({'error': str(e), 'sources': [], 'count': 0}), 500
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
@@ -156,24 +130,20 @@ def get_stats():
             'total_sources': Source.query.count(),
             'total_searches': db.session.query(SearchHistory).count()
         })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception as e: return jsonify({'error': str(e)}), 500
 
 @app.route('/api/import', methods=['POST'])
 def import_data():
     try:
         data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
+        if not data: return jsonify({'error': 'No data provided'}), 400
         subjects_data = data.get('subjects', [])
         imported = 0
         for item in subjects_data:
             subject = Subject(
-                title_ar=item.get('title_ar', ''),
-                title_en=item.get('title_en', ''),
+                title_ar=item.get('title_ar', ''), title_en=item.get('title_en', ''),
                 description=item.get('description', ''),
-                category_id=item.get('category_id'),
-                source_id=item.get('source_id')
+                category_id=item.get('category_id'), source_id=item.get('source_id')
             )
             db.session.add(subject)
             imported += 1
@@ -188,16 +158,13 @@ def init_db():
         db.create_all()
         if Source.query.count() == 0:
             sources_data = [
-                Source(name_ar='قائمة شعبان خليفة', name_en='Shaaban Khalifa List',
-                       description='قائمة رؤوس الموضوعات العربية الكبرى'),
-                Source(name_ar='رؤوس موضوعات مكتبة الكونجرس', name_en='LCSH',
-                       description='ترجمات عربية لرؤوس موضوعات الكونجرس'),
-                Source(name_ar='المجموعة العربية الموحدة', name_en='GASH',
-                       description='قائمة موحدة معتمدة من المكتبات العربية')
+                Source(name_ar='قائمة شعبان خليفة', name_en='Shaaban Khalifa List', description='قائمة رؤوس الموضوعات العربية الكبرى'),
+                Source(name_ar='رؤوس موضوعات مكتبة الكونجرس', name_en='LCSH', description='ترجمات عربية لرؤوس موضوعات الكونجرس'),
+                Source(name_ar='المجموعة العربية الموحدة', name_en='GASH', description='قائمة موحدة معتمدة من المكتبات العربية')
             ]
-            for source in sources_data:
-                db.session.add(source)
+            for s in sources_data: db.session.add(s)
             db.session.commit()
+
         if Category.query.count() == 0:
             categories_data = [
                 Category(name_ar='علوم الحاسوب وتكنولوجيا المعلومات', name_en='Computer Science & IT'),
@@ -209,13 +176,25 @@ def init_db():
                 Category(name_ar='الفنون والتربية', name_en='Arts & Education'),
                 Category(name_ar='الدين والفلسفة', name_en='Religion & Philosophy'),
             ]
-            for category in categories_data:
-                db.session.add(category)
+            for c in categories_data: db.session.add(c)
+            db.session.commit()
+        
+        # إضافة عينة من رؤوس الموضوعات
+        if Subject.query.count() == 0:
+            s1 = Source.query.first()
+            c1 = Category.query.first()
+            subjects_sample = [
+                Subject(title_ar='الذكاء الاصطناعي', title_en='Artificial Intelligence', description='العلم والتقنية لصنع آلات ذكية', category_id=c1.id, source_id=s1.id),
+                Subject(title_ar='الشبكات العصبية', title_en='Neural Networks', description='نماذج حاسوبية تحاكي الدماغ البشري', category_id=c1.id, source_id=s1.id),
+                Subject(title_ar='البيانات الضخمة', title_en='Big Data', description='مجموعات بيانات كبيرة ومعقدة', category_id=c1.id, source_id=s1.id),
+                Subject(title_ar='علم المكتبات الرقمية', title_en='Digital Library Science', description='تنظيم وإدارة المجموعات الرقمية', category_id=4, source_id=s1.id),
+                Subject(title_ar='مارك 21', title_en='MARC 21', description='معيار الفهرسة المقروءة آلياً', category_id=4, source_id=s1.id),
+            ]
+            for sub in subjects_sample: db.session.add(sub)
             db.session.commit()
 
 init_db()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    debug = os.environ.get('DEBUG', 'False').lower() == 'true'
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    app.run(host='0.0.0.0', port=port)
